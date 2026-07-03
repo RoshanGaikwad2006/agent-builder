@@ -34,7 +34,7 @@ async def chat(
     - **RAG Logic:** Resolves queries by mapping query vectors to Pinecone database contents, extracting matching text, stuffing it into prompts, and requesting completion from OpenAI.
     """
     logger.info(f"Chat request received: '{request.question}'")
-    result = rag_service.get_answer(request.question)
+    result = await rag_service.get_answer(request.question)
     logger.info("Successfully resolved RAG answer.")
     return ChatResponse(
         answer=result["answer"],

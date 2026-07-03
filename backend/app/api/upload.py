@@ -53,7 +53,7 @@ async def upload_file(
         
     # Trigger vector ingestion
     logger.info(f"Beginning indexing for: {file.filename}")
-    rag_service.ingest_pdf(file_path)
+    await rag_service.ingest_pdf(file_path)
     
     logger.info(f"Successfully processed upload and indexed: {file.filename}")
     return UploadResponse(
