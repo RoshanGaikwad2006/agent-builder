@@ -24,3 +24,13 @@ class LLMException(RAGPlatformException):
 class DocumentProcessingException(RAGPlatformException):
     """Raised when PDF loading, parsing, or text splitting operations fail."""
     pass
+
+
+class DatabaseConnectionException(RAGPlatformException):
+    """Raised when connecting to MongoDB database fails or pings timeout."""
+    pass
+
+
+class DatabaseWriteException(RAGPlatformException):
+    """Raised when write operations (inserts, updates, deletes) in MongoDB fail."""
+    pass

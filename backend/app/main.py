@@ -13,7 +13,7 @@ app_dir = os.path.dirname(os.path.abspath(__file__))
 if app_dir not in sys.path:
     sys.path.append(app_dir)
 
-from api import health, chat, upload
+from api import health, chat, upload, documents, conversations
 from core.config import settings
 from core.logging import setup_logging
 from core.exceptions import (
@@ -21,9 +21,11 @@ from core.exceptions import (
     ConfigurationException,
     VectorStoreException,
     LLMException,
-    DocumentProcessingException
+    DocumentProcessingException,
+    DatabaseConnectionException,
+    DatabaseWriteException
 )
-from core.dependencies import get_vectorstore_provider
+from core.dependencies import get_vectorstore_provider, get_mongodb_manager
 
 # Setup central logging system
 setup_logging(settings.LOG_LEVEL)
@@ -45,7 +47,13 @@ async def lifespan(app: FastAPI):
     if not settings.PINECONE_API_KEY:
         logger.warning("PINECONE_API_KEY is missing. Ingestions/Retrievals will fail until set.")
 
+    # Initialize MongoDB connection
+    mongo_manager = get_mongodb_manager()
+    await mongo_manager.connect()
+
     yield
+    # Close MongoDB connection
+    await mongo_manager.disconnect()
     logger.info("Stopping RAG Core Backend service...")
 
 
@@ -74,6 +82,8 @@ app.add_middleware(
 app.include_router(health.router)
 app.include_router(chat.router)
 app.include_router(upload.router)
+app.include_router(documents.router)
+app.include_router(conversations.router)
 
 
 @app.get(
@@ -114,6 +124,10 @@ async def rag_platform_exception_handler(request: Request, exc: RAGPlatformExcep
     elif isinstance(exc, DocumentProcessingException):
         status_code = status.HTTP_422_UNPROCESSABLE_ENTITY
     elif isinstance(exc, ConfigurationException):
+        status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+    elif isinstance(exc, DatabaseConnectionException):
+        status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+    elif isinstance(exc, DatabaseWriteException):
         status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
 
     return JSONResponse(

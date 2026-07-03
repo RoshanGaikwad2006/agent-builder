@@ -1,5 +1,8 @@
 from functools import lru_cache
+from fastapi import Depends
+from motor.motor_asyncio import AsyncIOMotorDatabase
 
+from database.mongodb import MongoDBManager
 from repositories.document_repository import DocumentRepository
 from repositories.conversation_repository import ConversationRepository
 from services.embedding.base import EmbeddingProvider
@@ -14,19 +17,32 @@ from services.rag.rag_service import RAGService
 
 
 @lru_cache()
-def get_document_repository() -> DocumentRepository:
+def get_mongodb_manager() -> MongoDBManager:
     """
-    Returns the singleton instance of the DocumentRepository.
+    Returns the singleton connection manager instance for MongoDB.
     """
-    return DocumentRepository()
+    return MongoDBManager()
 
 
-@lru_cache()
-def get_conversation_repository() -> ConversationRepository:
+def get_database(db_manager: MongoDBManager = Depends(get_mongodb_manager)) -> AsyncIOMotorDatabase:
     """
-    Returns the singleton instance of the ConversationRepository.
+    Dependency provider that returns the active MongoDB database instance.
     """
-    return ConversationRepository()
+    return db_manager.db
+
+
+def get_document_repository(db: AsyncIOMotorDatabase = Depends(get_database)) -> DocumentRepository:
+    """
+    Returns a DocumentRepository instance resolved with the active database connection.
+    """
+    return DocumentRepository(db=db)
+
+
+def get_conversation_repository(db: AsyncIOMotorDatabase = Depends(get_database)) -> ConversationRepository:
+    """
+    Returns a ConversationRepository instance resolved with the active database connection.
+    """
+    return ConversationRepository(db=db)
 
 
 @lru_cache()
@@ -54,35 +70,40 @@ def get_llm_provider() -> LLMProvider:
     return LLMProviderFactory.get_provider("openai")
 
 
-@lru_cache()
-def get_document_service() -> DocumentProcessor:
+def get_document_service(
+    vectorstore: VectorStoreProvider = Depends(get_vectorstore_provider),
+    doc_repo: DocumentRepository = Depends(get_document_repository)
+) -> DocumentProcessor:
     """
-    Returns the singleton instance of the PDFDocumentService.
+    Returns the PDFDocumentService instance.
     """
-    vectorstore = get_vectorstore_provider()
-    doc_repo = get_document_repository()
     return PDFDocumentService(vectorstore_provider=vectorstore, doc_repository=doc_repo)
 
 
-@lru_cache()
-def get_retriever_service() -> RetrieverService:
+def get_retriever_service(
+    vectorstore: VectorStoreProvider = Depends(get_vectorstore_provider)
+) -> RetrieverService:
     """
-    Returns the singleton instance of the RetrieverService.
+    Returns the RetrieverService instance.
     """
-    vectorstore = get_vectorstore_provider()
     return RetrieverService(vectorstore_provider=vectorstore)
 
 
-@lru_cache()
-def get_rag_service() -> RAGService:
+def get_rag_service(
+    llm: LLMProvider = Depends(get_llm_provider),
+    vectorstore: VectorStoreProvider = Depends(get_vectorstore_provider),
+    retriever: RetrieverService = Depends(get_retriever_service),
+    doc_service: DocumentProcessor = Depends(get_document_service),
+    conv_repo: ConversationRepository = Depends(get_conversation_repository)
+) -> RAGService:
     """
-    Returns the singleton instance of the RAGService.
-    Resolves and injects all downstream components (LLMs, embeddings, stores, processors).
+    Returns the RAGService orchestrator instance.
+    Resolves and injects all downstream components (LLMs, database repos, processors).
     """
     return RAGService(
-        llm_provider=get_llm_provider(),
-        vectorstore_provider=get_vectorstore_provider(),
-        retriever_service=get_retriever_service(),
-        document_service=get_document_service(),
-        conversation_repository=get_conversation_repository()
+        llm_provider=llm,
+        vectorstore_provider=vectorstore,
+        retriever_service=retriever,
+        document_service=doc_service,
+        conversation_repository=conv_repo
     )

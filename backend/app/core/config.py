@@ -23,6 +23,10 @@ class Settings(BaseSettings):
     EMBEDDING_MODEL_NAME: str = "sentence-transformers/all-MiniLM-L6-v2"
     VECTOR_DIMENSION: int = 384
 
+    # MongoDB Configurations
+    MONGODB_URI: str = "mongodb://localhost:27017"
+    DATABASE_NAME: str = "rag_platform"
+
     HOST: str = "0.0.0.0"
     PORT: int = 8080
     LOG_LEVEL: str = "INFO"

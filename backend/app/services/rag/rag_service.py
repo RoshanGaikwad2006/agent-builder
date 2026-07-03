@@ -7,6 +7,7 @@ from langchain.chains import create_retrieval_chain
 from langchain.chains.combine_documents import create_stuff_documents_chain
 from langchain_core.prompts import ChatPromptTemplate
 
+from models.conversation_model import ConversationModel
 from services.llm.base import LLMProvider
 from services.vectorstore.base import VectorStoreProvider
 from services.rag.retriever_service import RetrieverService
@@ -53,7 +54,7 @@ class RAGService:
         self.rag_chain = create_retrieval_chain(self._retriever, self.question_answer_chain)
         logger.info("Production RAG Core Chain initialization complete.")
 
-    def get_answer(self, question: str) -> Dict[str, Any]:
+    async def get_answer(self, question: str) -> Dict[str, Any]:
         """
         Orchestrates question answering by running similarity retrievals and LLM completions.
         Logs latency analytics in the conversation repository.
@@ -84,13 +85,18 @@ class RAGService:
         unique_sources = list(set(sources))
         
         # Log interaction metrics in conversation repository
-        model_name = getattr(self._chat_model, "model", "unknown-model")
-        self._conversation_repository.log_interaction(
-            question=question,
-            answer=answer,
-            latency=latency,
-            model=model_name
+        model_name = getattr(self._chat_model, "model_name", getattr(self._chat_model, "model", "unknown-model"))
+        
+        from datetime import datetime
+        conversation_data = ConversationModel(
+            user_question=question,
+            ai_answer=answer,
+            sources_used=unique_sources,
+            model_name=model_name,
+            response_time=f"{latency:.2f}s",
+            created_at=datetime.utcnow()
         )
+        await self._conversation_repository.log_interaction(conversation_data)
         
         logger.info(f"Generated response. Sources count: {len(unique_sources)}. Latency: {latency:.3f}s")
         return {
@@ -98,8 +104,8 @@ class RAGService:
             "sources": unique_sources
         }
 
-    def ingest_pdf(self, file_path: str) -> int:
+    async def ingest_pdf(self, file_path: str) -> int:
         """
         Delegates document parsing and embedding ingestion to the Document Service.
         """
-        return self._document_service.process_and_ingest(file_path)
+        return await self._document_service.process_and_ingest(file_path)

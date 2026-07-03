@@ -5,6 +5,7 @@ from abc import ABC, abstractmethod
 from langchain_core.documents import Document
 from langchain_community.document_loaders import PyPDFLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
+from models.document_model import DocumentModel
 
 from services.vectorstore.base import VectorStoreProvider
 from repositories.document_repository import DocumentRepository
@@ -35,7 +36,7 @@ class DocumentProcessor(ABC):
     """Abstract base class representing a document ingestion processor."""
 
     @abstractmethod
-    def process_and_ingest(self, file_path: str) -> int:
+    async def process_and_ingest(self, file_path: str) -> int:
         """
         Loads a document, chunks it, embeds it, and indexes it.
         Returns the number of valid chunks successfully upserted.
@@ -58,7 +59,7 @@ class PDFDocumentService(DocumentProcessor):
         self.chunk_size = settings.CHUNK_SIZE
         self.chunk_overlap = settings.CHUNK_OVERLAP
 
-    def process_and_ingest(self, file_path: str) -> int:
+    async def process_and_ingest(self, file_path: str) -> int:
         """
         Processes and upserts a local PDF file into the vector database.
         """
@@ -68,6 +69,7 @@ class PDFDocumentService(DocumentProcessor):
         logger.info(f"Loading and processing PDF file for ingestion: {file_path}")
         start_time = time.time()
         filename = os.path.basename(file_path)
+        file_size = os.path.getsize(file_path)
 
         try:
             # 1. Parse PDF pages
@@ -105,11 +107,20 @@ class PDFDocumentService(DocumentProcessor):
                 logger.warning("No valid text chunks found in PDF for ingestion.")
 
             # 6. Record metadata ingestion in repository
-            self._repository.record_ingestion(
+            from datetime import datetime
+            doc_data = DocumentModel(
                 filename=filename,
-                status="success",
-                chunk_count=len(valid_chunks)
+                original_filename=filename,
+                file_size=file_size,
+                file_type="pdf",
+                number_of_chunks=len(valid_chunks),
+                vector_store="pinecone",
+                vector_index_name=settings.PINECONE_INDEX_NAME,
+                upload_status="success",
+                created_at=datetime.utcnow(),
+                updated_at=datetime.utcnow()
             )
+            await self._repository.record_ingestion(doc_data)
 
             total_time = time.time() - start_time
             logger.info(f"Ingestion pipeline complete for: '{filename}'. Total time: {total_time:.3f}s")
@@ -117,9 +128,21 @@ class PDFDocumentService(DocumentProcessor):
 
         except Exception as e:
             logger.error(f"Failed to process and ingest PDF document '{filename}': {e}", exc_info=True)
-            self._repository.record_ingestion(
-                filename=filename,
-                status="failed",
-                chunk_count=0
-            )
+            try:
+                from datetime import datetime
+                doc_data = DocumentModel(
+                    filename=filename,
+                    original_filename=filename,
+                    file_size=file_size,
+                    file_type="pdf",
+                    number_of_chunks=0,
+                    vector_store="pinecone",
+                    vector_index_name=settings.PINECONE_INDEX_NAME,
+                    upload_status="failed",
+                    created_at=datetime.utcnow(),
+                    updated_at=datetime.utcnow()
+                )
+                await self._repository.record_ingestion(doc_data)
+            except Exception as repo_err:
+                logger.error(f"Failed to save failure status for document in database: {repo_err}")
             raise DocumentProcessingException(f"Failed to process and ingest PDF document: {e}") from e
