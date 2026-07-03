@@ -22,7 +22,7 @@ async def list_documents(
 ):
     logger.info("Request received to list all document metadata records.")
     docs = await doc_repository.get_all_documents()
-    return [DocumentResponse.model_validate(d.model_dump(by_alias=True)) for d in docs]
+    return [DocumentResponse.model_validate(d.model_dump()) for d in docs]
 
 
 @router.get(
@@ -44,7 +44,7 @@ async def get_document(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Document with ID '{id}' was not found."
         )
-    return DocumentResponse.model_validate(doc.model_dump(by_alias=True))
+    return DocumentResponse.model_validate(doc.model_dump())
 
 
 @router.delete(

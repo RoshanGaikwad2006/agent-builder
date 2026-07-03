@@ -22,7 +22,7 @@ async def list_conversations(
 ):
     logger.info("Request received to list all conversation records.")
     convs = await conv_repository.get_history()
-    return [ConversationResponse.model_validate(c.model_dump(by_alias=True)) for c in convs]
+    return [ConversationResponse.model_validate(c.model_dump()) for c in convs]
 
 
 @router.get(
@@ -44,7 +44,7 @@ async def get_conversation(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Conversation with ID '{id}' was not found."
         )
-    return ConversationResponse.model_validate(conv.model_dump(by_alias=True))
+    return ConversationResponse.model_validate(conv.model_dump())
 
 
 @router.delete(
