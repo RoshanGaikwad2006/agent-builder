@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Optional
 from pydantic import BaseModel, Field
 
 
@@ -9,6 +10,7 @@ class DocumentResponse(BaseModel):
     id: str = Field(..., description="Unique document database record ID.")
     filename: str = Field(..., description="Sanitized stored file name.")
     original_filename: str = Field(..., description="Original name of the uploaded document.")
+    agent_id: Optional[str] = Field(None, description="Owner agent database ID.")
     file_size: int = Field(..., description="Size of the file in bytes.")
     file_type: str = Field(..., description="Content type or file extension.")
     number_of_chunks: int = Field(..., description="Number of generated text segments.")

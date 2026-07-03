@@ -48,6 +48,21 @@ class DocumentRepository:
             logger.error(f"Failed to fetch documents from MongoDB: {e}")
             raise DatabaseWriteException(f"Failed to fetch documents: {e}") from e
 
+    async def get_documents_by_agent(self, agent_id: str) -> List[DocumentModel]:
+        """
+        Returns a list of all documents ingested for a specific agent.
+        """
+        try:
+            cursor = self.collection.find({"agent_id": agent_id}).sort("created_at", -1)
+            documents = []
+            async for doc in cursor:
+                doc["_id"] = str(doc["_id"])
+                documents.append(DocumentModel.model_validate(doc))
+            return documents
+        except Exception as e:
+            logger.error(f"Failed to fetch documents for Agent ID '{agent_id}' from MongoDB: {e}")
+            raise DatabaseWriteException(f"Failed to fetch agent documents: {e}") from e
+
     async def get_document_by_id(self, doc_id: str) -> Optional[DocumentModel]:
         """
         Retrieves a single document metadata record by its ID.

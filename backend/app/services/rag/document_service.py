@@ -2,6 +2,35 @@ import os
 import time
 import logging
 from abc import ABC, abstractmethod
+from typing import Optional
+from langchain_core.documents import Document
+from langchain_community.document_loaders import PyPDFLoader
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from models.document_model import DocumentModel
+
+from services.vectorstore.base import VectorStoreProvider
+from repositories.document_repository import DocumentRepository
+from core.config import settings
+from core.exceptions import DocumentProcessingException
+
+logger = logging.getLogger(__name__)
+
+
+def filter_to_minimal_docs(docs: list[Document]) -> list[Document]:
+    """
+    Given a list of Document objects, return a new list of Document objects
+    containing only 'source' in metadata and the original page_content.
+    """
+    minimal_docs: list[Document] = []
+    for doc in docs:
+        src = doc.metadata.get("source")
+        minimal_docs.append(
+            Document(
+                page_content=doc.page_content,
+                metadata={"source": src}
+            )
+        )
+from typing import Optional
 from langchain_core.documents import Document
 from langchain_community.document_loaders import PyPDFLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
@@ -36,7 +65,7 @@ class DocumentProcessor(ABC):
     """Abstract base class representing a document ingestion processor."""
 
     @abstractmethod
-    async def process_and_ingest(self, file_path: str) -> int:
+    async def process_and_ingest(self, file_path: str, agent_id: Optional[str] = None) -> int:
         """
         Loads a document, chunks it, embeds it, and indexes it.
         Returns the number of valid chunks successfully upserted.
@@ -59,7 +88,7 @@ class PDFDocumentService(DocumentProcessor):
         self.chunk_size = settings.CHUNK_SIZE
         self.chunk_overlap = settings.CHUNK_OVERLAP
 
-    async def process_and_ingest(self, file_path: str) -> int:
+    async def process_and_ingest(self, file_path: str, agent_id: Optional[str] = None) -> int:
         """
         Processes and upserts a local PDF file into the vector database.
         """
@@ -102,7 +131,8 @@ class PDFDocumentService(DocumentProcessor):
 
             # 5. Insert vectors to database
             if valid_chunks:
-                self._vectorstore.add_documents(valid_chunks)
+                namespace = f"agent_{agent_id}" if agent_id else None
+                self._vectorstore.add_documents(valid_chunks, namespace=namespace)
             else:
                 logger.warning("No valid text chunks found in PDF for ingestion.")
 
@@ -111,6 +141,7 @@ class PDFDocumentService(DocumentProcessor):
             doc_data = DocumentModel(
                 filename=filename,
                 original_filename=filename,
+                agent_id=agent_id,
                 file_size=file_size,
                 file_type="pdf",
                 number_of_chunks=len(valid_chunks),
@@ -133,6 +164,7 @@ class PDFDocumentService(DocumentProcessor):
                 doc_data = DocumentModel(
                     filename=filename,
                     original_filename=filename,
+                    agent_id=agent_id,
                     file_size=file_size,
                     file_type="pdf",
                     number_of_chunks=0,

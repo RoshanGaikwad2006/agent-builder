@@ -10,6 +10,7 @@ class DocumentModel(BaseModel):
     id: Optional[str] = Field(None, alias="_id")
     filename: str
     original_filename: str
+    agent_id: Optional[str] = Field(None, description="Owner agent ID for database isolation.")
     file_size: int
     file_type: str
     number_of_chunks: int

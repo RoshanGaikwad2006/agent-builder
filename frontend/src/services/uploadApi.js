@@ -42,5 +42,34 @@ export const uploadApi = {
   async deleteDocument(id) {
     const response = await apiClient.delete(`/documents/${id}`);
     return response.data;
+  },
+
+  /**
+   * Uploads a PDF document to an agent's isolated namespace.
+   */
+  async uploadAgentFile(agentId, file, onProgress) {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await apiClient.post(`/agents/${agentId}/knowledge/upload`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+      onUploadProgress: (progressEvent) => {
+        if (onProgress && progressEvent.total) {
+          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          onProgress(percentCompleted);
+        }
+      },
+    });
+    return response.data;
+  },
+
+  /**
+   * Fetches the metadata list of documents ingested for a specific agent.
+   */
+  async getAgentDocuments(agentId) {
+    const response = await apiClient.get(`/agents/${agentId}/knowledge`);
+    return response.data;
   }
 };

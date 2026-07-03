@@ -1,7 +1,7 @@
 import os
 import time
 import logging
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 
 from langchain.chains import create_retrieval_chain
 from langchain.chains.combine_documents import create_stuff_documents_chain
@@ -104,8 +104,8 @@ class RAGService:
             "sources": unique_sources
         }
 
-    async def ingest_pdf(self, file_path: str) -> int:
+    async def ingest_pdf(self, file_path: str, agent_id: Optional[str] = None) -> int:
         """
         Delegates document parsing and embedding ingestion to the Document Service.
         """
-        return await self._document_service.process_and_ingest(file_path)
+        return await self._document_service.process_and_ingest(file_path, agent_id=agent_id)

@@ -1,7 +1,7 @@
 import os
 import time
 import logging
-from typing import List
+from typing import List, Optional
 from pinecone import Pinecone, ServerlessSpec
 from langchain_pinecone import PineconeVectorStore
 from langchain_core.vectorstores import VectorStore
@@ -82,7 +82,7 @@ class PineconeService(VectorStoreProvider):
             logger.error(f"Error checking/creating Pinecone index '{self.index_name}': {e}")
             raise VectorStoreException(f"Error checking/creating Pinecone index: {e}") from e
 
-    def add_documents(self, documents: List[Document]) -> None:
+    def add_documents(self, documents: List[Document], namespace: Optional[str] = None) -> None:
         """
         Saves document chunks into the Pinecone database.
         """
@@ -91,9 +91,9 @@ class PineconeService(VectorStoreProvider):
             return
 
         try:
-            logger.info(f"Upserting {len(documents)} document vectors into Pinecone index '{self.index_name}'...")
+            logger.info(f"Upserting {len(documents)} document vectors into Pinecone index '{self.index_name}' (Namespace: '{namespace}')...")
             start_time = time.time()
-            self._docsearch.add_documents(documents)
+            self._docsearch.add_documents(documents, namespace=namespace)
             latency = time.time() - start_time
             logger.info(f"Successfully upserted vectors. Pinecone database latency: {latency:.3f}s")
         except Exception as e:

@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import List
+from typing import List, Optional
 from langchain_core.vectorstores import VectorStore
 from langchain_core.documents import Document
 
@@ -15,7 +15,7 @@ class VectorStoreProvider(ABC):
         pass
 
     @abstractmethod
-    def add_documents(self, documents: List[Document]) -> None:
+    def add_documents(self, documents: List[Document], namespace: Optional[str] = None) -> None:
         """
         Saves a list of document objects into the vector database.
         """

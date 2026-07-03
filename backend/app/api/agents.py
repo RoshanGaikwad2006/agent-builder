@@ -1,10 +1,16 @@
+import os
 import logging
 from typing import List
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, File, UploadFile
 
 from schemas.agent_schema import AgentCreate, AgentUpdate, AgentResponse
+from schemas.upload import UploadResponse
+from schemas.document_schema import DocumentResponse
 from services.agent_service import AgentService
-from core.dependencies import get_agent_service
+from services.rag.rag_service import RAGService
+from repositories.document_repository import DocumentRepository
+from core.dependencies import get_agent_service, get_rag_service, get_document_repository
+from core.config import settings
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["Agents"])
@@ -108,3 +114,74 @@ async def delete_agent(
         "status": "success",
         "message": f"Agent with ID '{id}' successfully deleted from database."
     }
+
+
+@router.post(
+    "/agents/{id}/knowledge/upload",
+    response_model=UploadResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Upload and Index PDF for Agent",
+    description="Uploads a PDF file, splits it, embeds it, and indexes it into Pinecone under the agent's isolated namespace."
+)
+async def upload_agent_knowledge(
+    id: str,
+    file: UploadFile = File(..., description="PDF document file to ingest"),
+    rag_service: RAGService = Depends(get_rag_service),
+    agent_service: AgentService = Depends(get_agent_service)
+):
+    logger.info(f"Agent knowledge upload request received for Agent ID: '{id}', file: '{file.filename}'")
+    # Verify agent exists first
+    agent = await agent_service.get_agent(id)
+    if not agent:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Agent with ID '{id}' was not found."
+        )
+
+    if not file.filename or not file.filename.lower().endswith(".pdf"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Unsupported file format. Only PDF files are allowed."
+        )
+
+    # Create upload directory if it does not exist
+    os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
+    
+    file_path = os.path.join(settings.UPLOAD_DIR, f"{id}_{file.filename}")
+    
+    # Save file contents locally
+    with open(file_path, "wb") as buffer:
+        content = await file.read()
+        buffer.write(content)
+        
+    # Trigger vector ingestion under namespace
+    await rag_service.ingest_pdf(file_path, agent_id=id)
+    
+    return UploadResponse(
+        filename=file.filename,
+        status="success",
+        message=f"File uploaded and indexed successfully into agent {id}'s knowledge base."
+    )
+
+
+@router.get(
+    "/agents/{id}/knowledge",
+    response_model=List[DocumentResponse],
+    status_code=status.HTTP_200_OK,
+    summary="List Ingested Documents for Agent",
+    description="Retrieves a list of all document metadata associated with this specific agent from MongoDB."
+)
+async def list_agent_knowledge(
+    id: str,
+    doc_repository: DocumentRepository = Depends(get_document_repository),
+    agent_service: AgentService = Depends(get_agent_service)
+):
+    logger.info(f"Request received to list knowledge for Agent ID: '{id}'")
+    agent = await agent_service.get_agent(id)
+    if not agent:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Agent with ID '{id}' was not found."
+        )
+    docs = await doc_repository.get_documents_by_agent(id)
+    return [DocumentResponse.model_validate(d.model_dump()) for d in docs]
