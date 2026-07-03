@@ -12,6 +12,7 @@ from services.rag.retriever_service import RetrieverService
 from repositories.agent_repository import AgentRepository
 from repositories.conversation_repository import ConversationRepository
 from models.conversation_model import ConversationModel
+from models.lead_model import LeadModel
 from core.exceptions import LLMException
 
 logger = logging.getLogger(__name__)
@@ -28,12 +29,14 @@ class AgentRuntimeService:
         llm_provider: LLMProvider,
         retriever_service: RetrieverService,
         agent_repository: AgentRepository,
-        conversation_repository: ConversationRepository
+        conversation_repository: ConversationRepository,
+        lead_repository: Any
     ):
         self._llm_provider = llm_provider
         self._retriever_service = retriever_service
         self._agent_repository = agent_repository
         self._conversation_repository = conversation_repository
+        self._lead_repository = lead_repository
 
     async def get_agent_response(self, agent_id: str, question: str) -> Optional[Dict[str, Any]]:
         logger.info(f"Invoking Agent Chat Runtime for Agent ID: '{agent_id}' with question: '{question}'")
@@ -97,6 +100,21 @@ class AgentRuntimeService:
             created_at=datetime.utcnow()
         )
         await self._conversation_repository.log_interaction(conversation_data)
+
+        # 5. Lead Detection Check
+        lead_keywords = {"price", "pricing", "cost", "demo", "buy", "purchase", "call", "contact", "quotation"}
+        normalized_question = question.lower()
+        if any(keyword in normalized_question for keyword in lead_keywords):
+            try:
+                lead_data = LeadModel(
+                    agent_id=agent_id,
+                    message=question,
+                    lead_type="hot",
+                    created_at=datetime.utcnow()
+                )
+                await self._lead_repository.create_lead(lead_data)
+            except Exception as e:
+                logger.error(f"Failed to log auto-detected lead: {e}")
 
         logger.info(f"Agent response generated. Sources count: {len(unique_sources)}. Latency: {latency:.3f}s")
         return {

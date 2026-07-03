@@ -55,6 +55,40 @@ const Sidebar = () => {
           </svg>
           Manage Agents
         </NavLink>
+
+        <NavLink
+          to="/conversations"
+          className={({ isActive }) =>
+            `flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors duration-150 ${
+              isActive
+                ? 'bg-green-50 text-green-700 dark:bg-green-950/30 dark:text-green-400'
+                : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200'
+            }`
+          }
+        >
+          {/* Conversations Icon */}
+          <svg className="w-5 h-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+          </svg>
+          Conversations Log
+        </NavLink>
+
+        <NavLink
+          to="/leads"
+          className={({ isActive }) =>
+            `flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors duration-150 ${
+              isActive
+                ? 'bg-green-50 text-green-700 dark:bg-green-950/30 dark:text-green-400'
+                : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200'
+            }`
+          }
+        >
+          {/* Leads Funnel Icon */}
+          <svg className="w-5 h-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          Captured Leads
+        </NavLink>
       </nav>
 
       {/* Footer copyright */}

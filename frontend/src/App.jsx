@@ -8,6 +8,8 @@ import CreateAgent from './pages/CreateAgent';
 import AgentDetails from './pages/AgentDetails';
 import AgentChat from './pages/AgentChat';
 import PublicAgentChat from './pages/PublicAgentChat';
+import Conversations from './pages/Conversations';
+import Leads from './pages/Leads';
 
 function App() {
   return (
@@ -26,6 +28,8 @@ function App() {
           <Route path="agents/create" element={<CreateAgent />} />
           <Route path="agents/:id" element={<AgentDetails />} />
           <Route path="agents/:id/chat" element={<AgentChat />} />
+          <Route path="conversations" element={<Conversations />} />
+          <Route path="leads" element={<Leads />} />
           {/* Fallback route */}
           <Route path="*" element={<Navigate to="/chat" replace />} />
         </Route>

@@ -6,7 +6,10 @@ from database.mongodb import MongoDBManager
 from repositories.document_repository import DocumentRepository
 from repositories.conversation_repository import ConversationRepository
 from repositories.agent_repository import AgentRepository
+from repositories.lead_repository import LeadRepository
 from services.agent_service import AgentService
+from services.lead_service import LeadService
+from services.conversation_service import ConversationService
 from services.embedding.base import EmbeddingProvider
 from services.embedding.huggingface_service import HuggingFaceEmbeddingService
 from services.vectorstore.base import VectorStoreProvider
@@ -60,6 +63,27 @@ def get_agent_service(agent_repo: AgentRepository = Depends(get_agent_repository
     Returns an AgentService instance resolved with the agent repository dependency.
     """
     return AgentService(agent_repository=agent_repo)
+
+
+def get_lead_repository(db: AsyncIOMotorDatabase = Depends(get_database)) -> LeadRepository:
+    """
+    Returns a LeadRepository instance resolved with the active database connection.
+    """
+    return LeadRepository(db=db)
+
+
+def get_lead_service(repo: LeadRepository = Depends(get_lead_repository)) -> LeadService:
+    """
+    Returns a LeadService instance.
+    """
+    return LeadService(repository=repo)
+
+
+def get_conversation_service(repo: ConversationRepository = Depends(get_conversation_repository)) -> ConversationService:
+    """
+    Returns a ConversationService instance.
+    """
+    return ConversationService(repository=repo)
 
 
 @lru_cache()
@@ -130,7 +154,8 @@ def get_agent_runtime_service(
     llm: LLMProvider = Depends(get_llm_provider),
     retriever: RetrieverService = Depends(get_retriever_service),
     agent_repo: AgentRepository = Depends(get_agent_repository),
-    conv_repo: ConversationRepository = Depends(get_conversation_repository)
+    conv_repo: ConversationRepository = Depends(get_conversation_repository),
+    lead_repo: LeadRepository = Depends(get_lead_repository)
 ) -> AgentRuntimeService:
     """
     Returns an AgentRuntimeService resolved with downstream LLM, vector search, and repositories.
@@ -139,5 +164,6 @@ def get_agent_runtime_service(
         llm_provider=llm,
         retriever_service=retriever,
         agent_repository=agent_repo,
-        conversation_repository=conv_repo
+        conversation_repository=conv_repo,
+        lead_repository=lead_repo
     )

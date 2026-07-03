@@ -1,10 +1,10 @@
 import logging
-from typing import List
+from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from schemas.conversation_schema import ConversationResponse
-from repositories.conversation_repository import ConversationRepository
-from core.dependencies import get_conversation_repository
+from services.conversation_service import ConversationService
+from core.dependencies import get_conversation_service
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["Conversations"])
@@ -15,13 +15,14 @@ router = APIRouter(tags=["Conversations"])
     response_model=List[ConversationResponse],
     status_code=status.HTTP_200_OK,
     summary="List Conversations History",
-    description="Returns metadata logs of all chat interactions stored in MongoDB."
+    description="Returns metadata logs of all chat interactions stored in MongoDB, optionally filtered by agent."
 )
 async def list_conversations(
-    conv_repository: ConversationRepository = Depends(get_conversation_repository)
+    agent_id: Optional[str] = None,
+    conv_service: ConversationService = Depends(get_conversation_service)
 ):
-    logger.info("Request received to list all conversation records.")
-    convs = await conv_repository.get_history()
+    logger.info(f"API request received to list conversations. Agent filter: '{agent_id}'")
+    convs = await conv_service.get_conversations(agent_id)
     return [ConversationResponse.model_validate(c.model_dump()) for c in convs]
 
 
@@ -34,10 +35,10 @@ async def list_conversations(
 )
 async def get_conversation(
     id: str,
-    conv_repository: ConversationRepository = Depends(get_conversation_repository)
+    conv_service: ConversationService = Depends(get_conversation_service)
 ):
-    logger.info(f"Request received to retrieve conversation by ID: '{id}'")
-    conv = await conv_repository.get_conversation_by_id(id)
+    logger.info(f"API request received to retrieve conversation by ID: '{id}'")
+    conv = await conv_service.get_conversation(id)
     if not conv:
         logger.warning(f"Conversation ID '{id}' was not found.")
         raise HTTPException(
@@ -55,10 +56,10 @@ async def get_conversation(
 )
 async def delete_conversation(
     id: str,
-    conv_repository: ConversationRepository = Depends(get_conversation_repository)
+    conv_service: ConversationService = Depends(get_conversation_service)
 ):
-    logger.info(f"Request received to delete conversation by ID: '{id}'")
-    success = await conv_repository.delete_conversation_by_id(id)
+    logger.info(f"API request received to delete conversation by ID: '{id}'")
+    success = await conv_service.delete_conversation(id)
     if not success:
         logger.warning(f"Conversation ID '{id}' not found for deletion.")
         raise HTTPException(
