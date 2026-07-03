@@ -24,4 +24,23 @@ export const uploadApi = {
     });
     return response.data;
   },
+
+  /**
+   * Fetches the metadata list of all ingested documents.
+   * @returns {Promise<Array>}
+   */
+  async getDocuments() {
+    const response = await apiClient.get('/documents');
+    return response.data;
+  },
+
+  /**
+   * Deletes a document by database ID.
+   * @param {string} id - Database ObjectId.
+   * @returns {Promise<object>}
+   */
+  async deleteDocument(id) {
+    const response = await apiClient.delete(`/documents/${id}`);
+    return response.data;
+  }
 };
