@@ -12,12 +12,15 @@ from services.agent_runtime_service import AgentRuntimeService
 from services.rag.rag_service import RAGService
 from repositories.document_repository import DocumentRepository
 from repositories.conversation_repository import ConversationRepository
+from models.user_model import UserModel
+from models.agent_model import AgentModel
 from core.dependencies import (
     get_agent_service,
     get_document_repository,
     get_agent_runtime_service,
     get_conversation_repository,
-    get_rag_service
+    get_rag_service,
+    get_current_user
 )
 from core.config import settings
 
@@ -25,19 +28,39 @@ logger = logging.getLogger(__name__)
 router = APIRouter(tags=["Agents"])
 
 
+async def verify_agent_owner(
+    id: str,
+    agent_service: AgentService,
+    current_user: UserModel
+) -> AgentModel:
+    agent = await agent_service.get_agent(id)
+    if not agent:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Agent with ID '{id}' was not found."
+        )
+    if agent.owner_id and agent.owner_id != str(current_user.id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied: you do not own this agent workspace."
+        )
+    return agent
+
+
 @router.post(
     "/agents",
     response_model=AgentResponse,
     status_code=status.HTTP_201_CREATED,
     summary="Create a new AI Agent",
-    description="Registers a new custom AI agent with configuration prompt rules."
+    description="Registers a new custom AI agent with configuration prompt rules tied to user account."
 )
 async def create_agent(
     request: AgentCreate,
-    agent_service: AgentService = Depends(get_agent_service)
+    agent_service: AgentService = Depends(get_agent_service),
+    current_user: UserModel = Depends(get_current_user)
 ):
-    logger.info(f"API request received to create agent: '{request.name}'")
-    agent = await agent_service.create_agent(request)
+    logger.info(f"API request received to create agent: '{request.name}' for User ID '{current_user.id}'")
+    agent = await agent_service.create_agent(request, owner_id=str(current_user.id))
     return AgentResponse.model_validate(agent.model_dump())
 
 
@@ -46,13 +69,14 @@ async def create_agent(
     response_model=List[AgentResponse],
     status_code=status.HTTP_200_OK,
     summary="List all AI Agents",
-    description="Returns metadata specifications of all registered AI agents in MongoDB."
+    description="Returns metadata specifications of all registered AI agents owned by the user."
 )
 async def list_agents(
-    agent_service: AgentService = Depends(get_agent_service)
+    agent_service: AgentService = Depends(get_agent_service),
+    current_user: UserModel = Depends(get_current_user)
 ):
-    logger.info("API request received to list all agents.")
-    agents = await agent_service.get_agents()
+    logger.info(f"API request received to list all agents for User ID '{current_user.id}'")
+    agents = await agent_service.get_agents(owner_id=str(current_user.id))
     return [AgentResponse.model_validate(a.model_dump()) for a in agents]
 
 
@@ -65,16 +89,11 @@ async def list_agents(
 )
 async def get_agent(
     id: str,
-    agent_service: AgentService = Depends(get_agent_service)
+    agent_service: AgentService = Depends(get_agent_service),
+    current_user: UserModel = Depends(get_current_user)
 ):
     logger.info(f"API request received to retrieve agent specs for ID: '{id}'")
-    agent = await agent_service.get_agent(id)
-    if not agent:
-        logger.warning(f"Agent ID '{id}' was not found.")
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Agent with ID '{id}' was not found."
-        )
+    agent = await verify_agent_owner(id, agent_service, current_user)
     return AgentResponse.model_validate(agent.model_dump())
 
 
@@ -88,14 +107,15 @@ async def get_agent(
 async def update_agent(
     id: str,
     request: AgentUpdate,
-    agent_service: AgentService = Depends(get_agent_service)
+    agent_service: AgentService = Depends(get_agent_service),
+    current_user: UserModel = Depends(get_current_user)
 ):
     logger.info(f"API request received to update agent ID: '{id}'")
+    await verify_agent_owner(id, agent_service, current_user)
     agent = await agent_service.update_agent(id, request)
     if not agent:
-        logger.warning(f"Agent ID '{id}' not found for updating.")
         raise HTTPException(
-            status_code=status.HTTP_444_NOT_FOUND if hasattr(status, "HTTP_444_NOT_FOUND") else status.HTTP_404_NOT_FOUND,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Agent with ID '{id}' was not found or could not be updated."
         )
     return AgentResponse.model_validate(agent.model_dump())
@@ -109,12 +129,13 @@ async def update_agent(
 )
 async def delete_agent(
     id: str,
-    agent_service: AgentService = Depends(get_agent_service)
+    agent_service: AgentService = Depends(get_agent_service),
+    current_user: UserModel = Depends(get_current_user)
 ):
     logger.info(f"API request received to delete agent ID: '{id}'")
+    await verify_agent_owner(id, agent_service, current_user)
     success = await agent_service.delete_agent(id)
     if not success:
-        logger.warning(f"Agent ID '{id}' not found for deletion.")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Agent with ID '{id}' was not found."
@@ -136,16 +157,11 @@ async def upload_agent_knowledge(
     id: str,
     file: UploadFile = File(..., description="PDF document file to ingest"),
     rag_service: RAGService = Depends(get_rag_service),
-    agent_service: AgentService = Depends(get_agent_service)
+    agent_service: AgentService = Depends(get_agent_service),
+    current_user: UserModel = Depends(get_current_user)
 ):
-    logger.info(f"Agent knowledge upload request received for Agent ID: '{id}', file: '{file.filename}'")
-    # Verify agent exists first
-    agent = await agent_service.get_agent(id)
-    if not agent:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Agent with ID '{id}' was not found."
-        )
+    logger.info(f"Agent knowledge upload request for Agent ID: '{id}', file: '{file.filename}'")
+    await verify_agent_owner(id, agent_service, current_user)
 
     if not file.filename or not file.filename.lower().endswith(".pdf"):
         raise HTTPException(
@@ -153,19 +169,15 @@ async def upload_agent_knowledge(
             detail="Unsupported file format. Only PDF files are allowed."
         )
 
-    # Create upload directory if it does not exist
     os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
-    
     file_path = os.path.join(settings.UPLOAD_DIR, f"{id}_{file.filename}")
-    
-    # Save file contents locally
+
     with open(file_path, "wb") as buffer:
         content = await file.read()
         buffer.write(content)
-        
-    # Trigger vector ingestion under namespace
+
     await rag_service.ingest_pdf(file_path, agent_id=id)
-    
+
     return UploadResponse(
         filename=file.filename,
         status="success",
@@ -183,15 +195,11 @@ async def upload_agent_knowledge(
 async def list_agent_knowledge(
     id: str,
     doc_repository: DocumentRepository = Depends(get_document_repository),
-    agent_service: AgentService = Depends(get_agent_service)
+    agent_service: AgentService = Depends(get_agent_service),
+    current_user: UserModel = Depends(get_current_user)
 ):
     logger.info(f"Request received to list knowledge for Agent ID: '{id}'")
-    agent = await agent_service.get_agent(id)
-    if not agent:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Agent with ID '{id}' was not found."
-        )
+    await verify_agent_owner(id, agent_service, current_user)
     docs = await doc_repository.get_documents_by_agent(id)
     return [DocumentResponse.model_validate(d.model_dump()) for d in docs]
 
@@ -228,15 +236,11 @@ async def chat_with_agent(
 async def get_agent_chat_history(
     agent_id: str,
     conv_repository: ConversationRepository = Depends(get_conversation_repository),
-    agent_service: AgentService = Depends(get_agent_service)
+    agent_service: AgentService = Depends(get_agent_service),
+    current_user: UserModel = Depends(get_current_user)
 ):
     logger.info(f"History request received for Agent ID '{agent_id}'")
-    agent = await agent_service.get_agent(agent_id)
-    if not agent:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Agent with ID '{agent_id}' was not found."
-        )
+    await verify_agent_owner(agent_id, agent_service, current_user)
     history = await conv_repository.get_history_by_agent(agent_id)
     return [ConversationResponse.model_validate(h.model_dump()) for h in history]
 
@@ -250,9 +254,11 @@ async def get_agent_chat_history(
 )
 async def deploy_agent(
     id: str,
-    agent_service: AgentService = Depends(get_agent_service)
+    agent_service: AgentService = Depends(get_agent_service),
+    current_user: UserModel = Depends(get_current_user)
 ):
     logger.info(f"Deployment request received for Agent ID: '{id}'")
+    await verify_agent_owner(id, agent_service, current_user)
     agent = await agent_service.deploy_agent(id)
     if not agent:
         raise HTTPException(

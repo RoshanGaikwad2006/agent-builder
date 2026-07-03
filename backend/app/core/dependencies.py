@@ -1,5 +1,7 @@
 from functools import lru_cache
-from fastapi import Depends
+from typing import Optional
+from fastapi import Depends, HTTPException, status
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from database.mongodb import MongoDBManager
@@ -7,9 +9,12 @@ from repositories.document_repository import DocumentRepository
 from repositories.conversation_repository import ConversationRepository
 from repositories.agent_repository import AgentRepository
 from repositories.lead_repository import LeadRepository
+from repositories.user_repository import UserRepository
 from services.agent_service import AgentService
 from services.lead_service import LeadService
 from services.conversation_service import ConversationService
+from services.auth_service import AuthService
+from models.user_model import UserModel
 from services.embedding.base import EmbeddingProvider
 from services.embedding.huggingface_service import HuggingFaceEmbeddingService
 from services.vectorstore.base import VectorStoreProvider
@@ -84,6 +89,20 @@ def get_conversation_service(repo: ConversationRepository = Depends(get_conversa
     Returns a ConversationService instance.
     """
     return ConversationService(repository=repo)
+
+
+def get_user_repository(db: AsyncIOMotorDatabase = Depends(get_database)) -> UserRepository:
+    """
+    Returns a UserRepository instance.
+    """
+    return UserRepository(db=db)
+
+
+def get_auth_service(repo: UserRepository = Depends(get_user_repository)) -> AuthService:
+    """
+    Returns an AuthService instance.
+    """
+    return AuthService(repository=repo)
 
 
 @lru_cache()
@@ -167,3 +186,35 @@ def get_agent_runtime_service(
         conversation_repository=conv_repo,
         lead_repository=lead_repo
     )
+
+
+security = HTTPBearer(auto_error=False)
+
+
+async def get_current_user(
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
+    user_repo: UserRepository = Depends(get_user_repository),
+    auth_service: AuthService = Depends(get_auth_service)
+) -> UserModel:
+    """
+    HTTPBearer dependency resolver that parses Authorization headers, decodes JWT keys, and returns User context.
+    """
+    if not credentials:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication token is missing. Please log in."
+        )
+    token = credentials.credentials
+    user_id = auth_service.verify_jwt_token(token)
+    if not user_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication token is invalid or has expired."
+        )
+    user = await user_repo.get_user_by_id(user_id)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authenticated user specifications not found."
+        )
+    return user

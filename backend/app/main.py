@@ -13,7 +13,7 @@ app_dir = os.path.dirname(os.path.abspath(__file__))
 if app_dir not in sys.path:
     sys.path.append(app_dir)
 
-from api import health, chat, upload, documents, conversations, agents, leads
+from api import health, chat, upload, documents, conversations, agents, leads, auth
 from core.config import settings
 from core.logging import setup_logging
 from core.exceptions import (
@@ -86,6 +86,7 @@ app.include_router(documents.router)
 app.include_router(conversations.router)
 app.include_router(agents.router)
 app.include_router(leads.router)
+app.include_router(auth.router)
 
 
 @app.get(

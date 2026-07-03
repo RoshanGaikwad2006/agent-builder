@@ -17,13 +17,14 @@ class AgentService:
     def __init__(self, agent_repository: AgentRepository):
         self._repository = agent_repository
 
-    async def create_agent(self, schema: AgentCreate) -> AgentModel:
-        logger.info(f"Processing agent creation request: '{schema.name}'")
+    async def create_agent(self, schema: AgentCreate, owner_id: str) -> AgentModel:
+        logger.info(f"Processing agent creation request: '{schema.name}' for Owner ID '{owner_id}'")
         agent_data = AgentModel(
             name=schema.name,
             description=schema.description,
             system_prompt=schema.system_prompt,
             status=schema.status,
+            owner_id=owner_id,
             created_at=datetime.utcnow(),
             updated_at=datetime.utcnow()
         )
@@ -31,9 +32,9 @@ class AgentService:
         agent_data.id = inserted_id
         return agent_data
 
-    async def get_agents(self) -> List[AgentModel]:
-        logger.info("Processing fetch all agents request.")
-        return await self._repository.get_all_agents()
+    async def get_agents(self, owner_id: Optional[str] = None) -> List[AgentModel]:
+        logger.info(f"Processing fetch agents request. Filter owner: '{owner_id}'")
+        return await self._repository.get_all_agents(owner_id=owner_id)
 
     async def get_agent(self, agent_id: str) -> Optional[AgentModel]:
         logger.info(f"Processing fetch agent specs by ID: '{agent_id}'")

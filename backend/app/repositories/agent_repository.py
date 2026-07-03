@@ -30,9 +30,12 @@ class AgentRepository:
             logger.error(f"Failed to create agent in MongoDB: {e}")
             raise DatabaseWriteException(f"Failed to create agent: {e}") from e
 
-    async def get_all_agents(self) -> List[AgentModel]:
+    async def get_all_agents(self, owner_id: Optional[str] = None) -> List[AgentModel]:
         try:
-            cursor = self.collection.find().sort("created_at", -1)
+            query = {}
+            if owner_id:
+                query["owner_id"] = owner_id
+            cursor = self.collection.find(query).sort("created_at", -1)
             agents = []
             async for doc in cursor:
                 doc["_id"] = str(doc["_id"])
