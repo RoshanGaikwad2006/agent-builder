@@ -6,6 +6,7 @@ import Upload from './pages/Upload';
 import Agents from './pages/Agents';
 import CreateAgent from './pages/CreateAgent';
 import AgentDetails from './pages/AgentDetails';
+import AgentChat from './pages/AgentChat';
 
 function App() {
   return (
@@ -19,6 +20,7 @@ function App() {
           <Route path="agents" element={<Agents />} />
           <Route path="agents/create" element={<CreateAgent />} />
           <Route path="agents/:id" element={<AgentDetails />} />
+          <Route path="agents/:id/chat" element={<AgentChat />} />
           {/* Fallback route */}
           <Route path="*" element={<Navigate to="/chat" replace />} />
         </Route>

@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List
 from pydantic import BaseModel, Field
 
 
@@ -37,3 +37,18 @@ class AgentResponse(BaseModel):
 
     class Config:
         populate_by_name = True
+
+
+class AgentChatRequest(BaseModel):
+    """
+    Validation schema for message requests sent to an agent.
+    """
+    message: str = Field(..., min_length=1, description="Message text sent by the user.")
+
+
+class AgentChatResponse(BaseModel):
+    """
+    Validation schema for agent response payloads.
+    """
+    answer: str = Field(..., description="Agent response answer text.")
+    sources: List[str] = Field(default_factory=list, description="Grounding source documents.")

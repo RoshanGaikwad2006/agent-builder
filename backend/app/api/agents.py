@@ -3,13 +3,22 @@ import logging
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status, File, UploadFile
 
-from schemas.agent_schema import AgentCreate, AgentUpdate, AgentResponse
+from schemas.agent_schema import AgentCreate, AgentUpdate, AgentResponse, AgentChatRequest, AgentChatResponse
 from schemas.upload import UploadResponse
 from schemas.document_schema import DocumentResponse
+from schemas.conversation_schema import ConversationResponse
 from services.agent_service import AgentService
+from services.agent_runtime_service import AgentRuntimeService
 from services.rag.rag_service import RAGService
 from repositories.document_repository import DocumentRepository
-from core.dependencies import get_agent_service, get_rag_service, get_document_repository
+from repositories.conversation_repository import ConversationRepository
+from core.dependencies import (
+    get_agent_service,
+    get_document_repository,
+    get_agent_runtime_service,
+    get_conversation_repository,
+    get_rag_service
+)
 from core.config import settings
 
 logger = logging.getLogger(__name__)
@@ -185,3 +194,48 @@ async def list_agent_knowledge(
         )
     docs = await doc_repository.get_documents_by_agent(id)
     return [DocumentResponse.model_validate(d.model_dump()) for d in docs]
+
+
+@router.post(
+    "/agents/{agent_id}/chat",
+    response_model=AgentChatResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Chat with custom agent profile",
+    description="Invokes the isolated agent execution engine to retrieve grounded answers from its Pinecone namespace."
+)
+async def chat_with_agent(
+    agent_id: str,
+    request: AgentChatRequest,
+    runtime_service: AgentRuntimeService = Depends(get_agent_runtime_service)
+):
+    logger.info(f"Chat request received for Agent ID '{agent_id}'")
+    response = await runtime_service.get_agent_response(agent_id, request.message)
+    if not response:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Agent with ID '{agent_id}' was not found or is inactive."
+        )
+    return AgentChatResponse.model_validate(response)
+
+
+@router.get(
+    "/agents/{agent_id}/history",
+    response_model=List[ConversationResponse],
+    status_code=status.HTTP_200_OK,
+    summary="Get conversation history log for agent",
+    description="Returns list of previously logged user queries and agent responses."
+)
+async def get_agent_chat_history(
+    agent_id: str,
+    conv_repository: ConversationRepository = Depends(get_conversation_repository),
+    agent_service: AgentService = Depends(get_agent_service)
+):
+    logger.info(f"History request received for Agent ID '{agent_id}'")
+    agent = await agent_service.get_agent(agent_id)
+    if not agent:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Agent with ID '{agent_id}' was not found."
+        )
+    history = await conv_repository.get_history_by_agent(agent_id)
+    return [ConversationResponse.model_validate(h.model_dump()) for h in history]

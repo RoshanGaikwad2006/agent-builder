@@ -47,6 +47,21 @@ class ConversationRepository:
             logger.error(f"Failed to fetch conversation history from MongoDB: {e}")
             raise DatabaseWriteException(f"Failed to fetch conversation history: {e}") from e
 
+    async def get_history_by_agent(self, agent_id: str) -> List[ConversationModel]:
+        """
+        Returns the chat interaction history logs specifically for an agent.
+        """
+        try:
+            cursor = self.collection.find({"agent_id": agent_id}).sort("created_at", 1)
+            conversations = []
+            async for doc in cursor:
+                doc["_id"] = str(doc["_id"])
+                conversations.append(ConversationModel.model_validate(doc))
+            return conversations
+        except Exception as e:
+            logger.error(f"Failed to fetch conversation history for Agent '{agent_id}' from MongoDB: {e}")
+            raise DatabaseWriteException(f"Failed to fetch conversation history: {e}") from e
+
     async def get_conversation_by_id(self, conv_id: str) -> Optional[ConversationModel]:
         """
         Retrieves a single conversation record by its ID.

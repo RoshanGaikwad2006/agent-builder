@@ -16,6 +16,7 @@ from services.llm.factory import LLMProviderFactory
 from services.rag.document_service import DocumentProcessor, PDFDocumentService
 from services.rag.retriever_service import RetrieverService
 from services.rag.rag_service import RAGService
+from services.agent_runtime_service import AgentRuntimeService
 
 
 @lru_cache()
@@ -121,5 +122,22 @@ def get_rag_service(
         vectorstore_provider=vectorstore,
         retriever_service=retriever,
         document_service=doc_service,
+        conversation_repository=conv_repo
+    )
+
+
+def get_agent_runtime_service(
+    llm: LLMProvider = Depends(get_llm_provider),
+    retriever: RetrieverService = Depends(get_retriever_service),
+    agent_repo: AgentRepository = Depends(get_agent_repository),
+    conv_repo: ConversationRepository = Depends(get_conversation_repository)
+) -> AgentRuntimeService:
+    """
+    Returns an AgentRuntimeService resolved with downstream LLM, vector search, and repositories.
+    """
+    return AgentRuntimeService(
+        llm_provider=llm,
+        retriever_service=retriever,
+        agent_repository=agent_repo,
         conversation_repository=conv_repo
     )

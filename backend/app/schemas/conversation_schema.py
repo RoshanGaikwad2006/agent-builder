@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import List
+from typing import List, Optional
 from pydantic import BaseModel, Field
 
 
@@ -10,6 +10,7 @@ class ConversationResponse(BaseModel):
     id: str = Field(..., description="Unique conversation record ID.")
     user_question: str = Field(..., description="The user query text.")
     ai_answer: str = Field(..., description="The LLM assistant generated response text.")
+    agent_id: Optional[str] = Field(None, description="Owner agent ID.")
     sources_used: List[str] = Field(..., description="List of source files retrieved for grounding.")
     model_name: str = Field(..., description="LLM model name.")
     response_time: str = Field(..., description="Performance latency duration.")

@@ -45,12 +45,18 @@ const AgentCard = ({ agent, onDelete }) => {
         </p>
       </div>
 
-      <div className="border-t border-gray-100 dark:border-gray-800 pt-4 mt-auto">
+      <div className="border-t border-gray-100 dark:border-gray-800 pt-4 mt-auto flex justify-between items-center">
         <Link 
           to={`/agents/${agent.id}`} 
-          className="text-sm font-medium text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300 flex items-center"
+          className="text-sm font-medium text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
         >
-          Configure Settings &rarr;
+          Configure Settings
+        </Link>
+        <Link 
+          to={`/agents/${agent.id}/chat`} 
+          className="text-sm font-semibold text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300 flex items-center"
+        >
+          Chat Session &rarr;
         </Link>
       </div>
     </div>

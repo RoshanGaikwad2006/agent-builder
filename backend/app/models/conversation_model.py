@@ -10,6 +10,7 @@ class ConversationModel(BaseModel):
     id: Optional[str] = Field(None, alias="_id")
     user_question: str
     ai_answer: str
+    agent_id: Optional[str] = Field(None, description="Associated Agent database ID.")
     sources_used: List[str] = Field(default_factory=list)
     model_name: str
     response_time: str
