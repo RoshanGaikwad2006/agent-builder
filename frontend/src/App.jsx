@@ -7,11 +7,16 @@ import Agents from './pages/Agents';
 import CreateAgent from './pages/CreateAgent';
 import AgentDetails from './pages/AgentDetails';
 import AgentChat from './pages/AgentChat';
+import PublicAgentChat from './pages/PublicAgentChat';
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
+        {/* Public standalone chat route without sidebar */}
+        <Route path="agent/:id" element={<PublicAgentChat />} />
+
+        {/* Dashboard routes with sidebar */}
         <Route path="/" element={<AppLayout />}>
           {/* Default redirect to /chat */}
           <Route index element={<Navigate to="/chat" replace />} />

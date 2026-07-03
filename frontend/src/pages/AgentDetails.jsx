@@ -4,6 +4,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import AgentForm from '../components/Agent/AgentForm';
 import { agentApi } from '../services/agentApi';
 import { uploadApi } from '../services/uploadApi';
+import apiClient from '../services/apiClient';
 
 
 const AgentDetails = () => {
@@ -62,6 +63,23 @@ const AgentDetails = () => {
     }
   };
 
+  const handleDeploy = async () => {
+    try {
+      const response = await apiClient.post(`/agents/${id}/deploy`);
+      setAgent(response.data);
+      alert("Agent deployed successfully!");
+    } catch (err) {
+      alert("Failed to deploy agent: " + (err.response?.data?.detail || err.message));
+    }
+  };
+
+  const copyDeploymentLink = () => {
+    if (!agent?.public_url) return;
+    const fullUrl = `${window.location.origin}${agent.public_url}`;
+    navigator.clipboard.writeText(fullUrl);
+    alert("Public link copied to clipboard!");
+  };
+
   const handleFileUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -111,7 +129,7 @@ const AgentDetails = () => {
 
   return (
     <div className="space-y-6 h-[calc(100vh-7rem)] overflow-y-auto pr-2">
-      <div className="flex-none flex items-center justify-between border-b border-gray-150 dark:border-gray-800 pb-4">
+      <div className="flex-none flex items-center justify-between border-b border-gray-155 dark:border-gray-800 pb-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Agent Settings</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400">
@@ -154,18 +172,72 @@ const AgentDetails = () => {
 
           {/* Active Tab Panel */}
           {activeTab === 'settings' ? (
-            <div className="max-w-2xl p-6 bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded-2xl">
-              <AgentForm 
-                initialValues={agent}
-                onSubmit={handleUpdate} 
-                onCancel={() => navigate('/agents')} 
-                buttonLabel="Update Agent Profile"
-              />
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
+              {/* Form Settings */}
+              <div className="md:col-span-2 p-6 bg-white dark:bg-gray-955 border border-gray-200 dark:border-gray-800 rounded-2xl">
+                <AgentForm 
+                  initialValues={agent}
+                  onSubmit={handleUpdate} 
+                  onCancel={() => navigate('/agents')} 
+                  buttonLabel="Update Agent Profile"
+                />
+              </div>
+
+              {/* Deployment Settings Panel */}
+              <div className="p-6 bg-white dark:bg-gray-955 border border-gray-200 dark:border-gray-800 rounded-2xl space-y-4">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Deployment</h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Deploy this agent publicly to generate a standalone shareable chat link.
+                </p>
+
+                <div className="flex flex-col space-y-3 pt-2">
+                  <div className="flex items-center justify-between text-xs font-semibold">
+                    <span className="text-gray-500 dark:text-gray-400">Status:</span>
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-2xs font-bold ${
+                      agent.is_deployed 
+                        ? 'bg-green-50 text-green-700 dark:bg-green-950/30 dark:text-green-400'
+                        : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'
+                    }`}>
+                      {agent.is_deployed ? 'Live (Public)' : 'Draft (Local Only)'}
+                    </span>
+                  </div>
+
+                  {agent.is_deployed && agent.public_url && (
+                    <div className="flex flex-col space-y-2 mt-2 pt-2 border-t border-gray-100 dark:border-gray-850">
+                      <label className="text-2xs text-gray-500 dark:text-gray-450 font-bold uppercase tracking-wider">Share Link:</label>
+                      <div className="flex items-center space-x-1.5">
+                        <input
+                          type="text"
+                          readOnly
+                          value={`${window.location.origin}${agent.public_url}`}
+                          className="flex-1 text-2xs px-2.5 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg text-gray-600 dark:text-gray-400 outline-none select-all"
+                        />
+                        <button
+                          onClick={copyDeploymentLink}
+                          className="p-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg text-xs font-semibold transition-colors"
+                          title="Copy link to clipboard"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m-3 8h3m-3 3h3m-9-3h.01M5 16h.01" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  <button
+                    onClick={handleDeploy}
+                    className="w-full mt-4 py-2.5 px-4 bg-green-600 hover:bg-green-700 text-white font-medium text-sm rounded-xl transition-colors shadow-sm"
+                  >
+                    {agent.is_deployed ? 'Re-deploy Agent' : 'Deploy Publicly'}
+                  </button>
+                </div>
+              </div>
             </div>
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
               {/* Upload Panel */}
-              <div className="lg:col-span-2 p-6 bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded-2xl space-y-4">
+              <div className="lg:col-span-2 p-6 bg-white dark:bg-gray-955 border border-gray-200 dark:border-gray-808 rounded-2xl space-y-4">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Add Agent Documents</h3>
                 <p className="text-xs text-gray-500 dark:text-gray-400">
                   Upload PDF documents to parse, embed, and index them into this agent's isolated namespace.
@@ -203,20 +275,20 @@ const AgentDetails = () => {
                 )}
 
                 {uploadStatus === 'success' && uploadSuccessMessage && (
-                  <div className="p-4 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-900 text-sm text-green-700 dark:text-green-400 rounded-xl font-medium">
+                  <div className="p-4 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-900 text-sm text-green-755 dark:text-green-400 rounded-xl font-medium">
                     {uploadSuccessMessage}
                   </div>
                 )}
 
                 {uploadStatus === 'error' && uploadError && (
-                  <div className="p-4 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900 text-sm text-red-600 dark:text-red-400 rounded-xl font-medium">
+                  <div className="p-4 bg-red-50 dark:bg-red-955/20 border border-red-200 dark:border-red-900 text-sm text-red-655 dark:text-red-400 rounded-xl font-medium">
                     {uploadError}
                   </div>
                 )}
               </div>
 
               {/* Ingested Documents List */}
-              <div className="p-6 bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-808 rounded-2xl flex flex-col min-h-[350px]">
+              <div className="p-6 bg-white dark:bg-gray-955 border border-gray-200 dark:border-gray-808 rounded-2xl flex flex-col min-h-[350px]">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Ingested Knowledge</h3>
 
                 {loadingDocs ? (

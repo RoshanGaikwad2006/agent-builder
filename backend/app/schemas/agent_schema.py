@@ -32,6 +32,9 @@ class AgentResponse(BaseModel):
     description: str
     system_prompt: str
     status: str
+    deployment_id: Optional[str] = Field(None)
+    public_url: Optional[str] = Field(None)
+    is_deployed: Optional[bool] = Field(False)
     created_at: datetime
     updated_at: datetime
 

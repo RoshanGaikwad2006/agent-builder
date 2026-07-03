@@ -56,3 +56,16 @@ class AgentService:
     async def delete_agent(self, agent_id: str) -> bool:
         logger.info(f"Processing delete agent request for ID: '{agent_id}'")
         return await self._repository.delete_agent(agent_id)
+
+    async def deploy_agent(self, agent_id: str) -> Optional[AgentModel]:
+        logger.info(f"Processing deploy agent request for ID: '{agent_id}'")
+        updates = {
+            "deployment_id": agent_id,
+            "public_url": f"/agent/{agent_id}",
+            "is_deployed": True
+        }
+        success = await self._repository.update_agent(agent_id, updates)
+        if not success:
+            logger.warning(f"Could not deploy agent with ID '{agent_id}'.")
+            return None
+        return await self.get_agent(agent_id)

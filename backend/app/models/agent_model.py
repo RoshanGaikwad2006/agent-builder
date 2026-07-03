@@ -12,6 +12,9 @@ class AgentModel(BaseModel):
     description: str
     system_prompt: str
     status: str = "active"
+    deployment_id: Optional[str] = Field(None, description="Unique deployment identifier.")
+    public_url: Optional[str] = Field(None, description="Public shareable URL.")
+    is_deployed: bool = Field(False, description="Deployment status flag.")
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 

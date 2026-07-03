@@ -239,3 +239,24 @@ async def get_agent_chat_history(
         )
     history = await conv_repository.get_history_by_agent(agent_id)
     return [ConversationResponse.model_validate(h.model_dump()) for h in history]
+
+
+@router.post(
+    "/agents/{id}/deploy",
+    response_model=AgentResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Deploy AI Agent publicly",
+    description="Sets deployment status flags and generates a public shareable URL for the agent."
+)
+async def deploy_agent(
+    id: str,
+    agent_service: AgentService = Depends(get_agent_service)
+):
+    logger.info(f"Deployment request received for Agent ID: '{id}'")
+    agent = await agent_service.deploy_agent(id)
+    if not agent:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Agent with ID '{id}' was not found or could not be deployed."
+        )
+    return AgentResponse.model_validate(agent.model_dump())
