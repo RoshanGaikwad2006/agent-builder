@@ -5,6 +5,8 @@ from motor.motor_asyncio import AsyncIOMotorDatabase
 from database.mongodb import MongoDBManager
 from repositories.document_repository import DocumentRepository
 from repositories.conversation_repository import ConversationRepository
+from repositories.agent_repository import AgentRepository
+from services.agent_service import AgentService
 from services.embedding.base import EmbeddingProvider
 from services.embedding.huggingface_service import HuggingFaceEmbeddingService
 from services.vectorstore.base import VectorStoreProvider
@@ -43,6 +45,20 @@ def get_conversation_repository(db: AsyncIOMotorDatabase = Depends(get_database)
     Returns a ConversationRepository instance resolved with the active database connection.
     """
     return ConversationRepository(db=db)
+
+
+def get_agent_repository(db: AsyncIOMotorDatabase = Depends(get_database)) -> AgentRepository:
+    """
+    Returns an AgentRepository instance resolved with the active database connection.
+    """
+    return AgentRepository(db=db)
+
+
+def get_agent_service(agent_repo: AgentRepository = Depends(get_agent_repository)) -> AgentService:
+    """
+    Returns an AgentService instance resolved with the agent repository dependency.
+    """
+    return AgentService(agent_repository=agent_repo)
 
 
 @lru_cache()
