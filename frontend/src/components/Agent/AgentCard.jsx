@@ -53,10 +53,10 @@ const AgentCard = ({ agent, onDelete }) => {
           Configure Settings
         </Link>
         <Link 
-          to={`/agents/${agent.id}/chat`} 
+          to={`/agents/${agent.id}?tab=chat`} 
           className="text-sm font-semibold text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300 flex items-center"
         >
-          Chat Session &rarr;
+          Chat Sandbox &rarr;
         </Link>
       </div>
     </div>

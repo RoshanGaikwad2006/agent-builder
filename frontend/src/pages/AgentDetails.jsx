@@ -1,20 +1,23 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 
 import AgentForm from '../components/Agent/AgentForm';
 import { agentApi } from '../services/agentApi';
 import { uploadApi } from '../services/uploadApi';
 import apiClient from '../services/apiClient';
+import ChatWindow from '../components/Chat/ChatWindow';
+import MessageInput from '../components/Chat/MessageInput';
 
 
 const AgentDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [agent, setAgent] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   
-  // Tabs configuration: 'settings' | 'knowledge'
+  // Tabs configuration: 'settings' | 'knowledge' | 'chat'
   const [activeTab, setActiveTab] = useState('settings');
 
   // Knowledge base state variables
@@ -24,6 +27,18 @@ const AgentDetails = () => {
   const [uploadStatus, setUploadStatus] = useState('idle'); // idle, uploading, indexing, success, error
   const [uploadError, setUploadError] = useState(null);
   const [uploadSuccessMessage, setUploadSuccessMessage] = useState(null);
+
+  // Chat sandbox state variables
+  const [chatMessages, setChatMessages] = useState([]);
+  const [isChatLoading, setIsChatLoading] = useState(false);
+
+  // Read tab query parameter on load
+  useEffect(() => {
+    const tabParam = searchParams.get('tab');
+    if (tabParam && ['settings', 'knowledge', 'chat'].includes(tabParam)) {
+      setActiveTab(tabParam);
+    }
+  }, [searchParams]);
 
   const fetchAgent = async () => {
     try {
@@ -49,10 +64,53 @@ const AgentDetails = () => {
     }
   };
 
+  const fetchChatHistory = async () => {
+    try {
+      const historyResponse = await apiClient.get(`/agents/${id}/history`);
+      const historyData = historyResponse.data;
+      const loadedMessages = [];
+      historyData.forEach((item) => {
+        const timestamp = new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        loadedMessages.push({
+          id: `${item.id}-user`,
+          sender: 'user',
+          text: item.user_question,
+          timestamp,
+        });
+        loadedMessages.push({
+          id: `${item.id}-agent`,
+          sender: 'agent',
+          text: item.ai_answer,
+          sources: item.sources_used,
+          timestamp,
+        });
+      });
+
+      // Greeting message if history is empty
+      if (loadedMessages.length === 0 && agent) {
+        loadedMessages.push({
+          id: 'greeting',
+          sender: 'agent',
+          text: `Hello! I am ${agent.name}. ${agent.description || 'Ask me anything about my knowledge base.'}`,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        });
+      }
+      setChatMessages(loadedMessages);
+    } catch (err) {
+      console.error("Failed to fetch chat history:", err);
+    }
+  };
+
   useEffect(() => {
     fetchAgent();
     fetchDocuments();
   }, [id]);
+
+  useEffect(() => {
+    if (activeTab === 'chat' && agent) {
+      fetchChatHistory();
+    }
+  }, [activeTab, agent]);
 
   const handleUpdate = async (formData) => {
     try {
@@ -78,6 +136,42 @@ const AgentDetails = () => {
     const fullUrl = `${window.location.origin}${agent.public_url}`;
     navigator.clipboard.writeText(fullUrl);
     alert("Public link copied to clipboard!");
+  };
+
+  const handleSendChatMessage = async (text) => {
+    const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const userMessage = {
+      id: `msg-${Date.now()}-user`,
+      sender: 'user',
+      text,
+      timestamp,
+    };
+
+    setChatMessages((prev) => [...prev, userMessage]);
+    setIsChatLoading(true);
+
+    try {
+      const response = await apiClient.post(`/agents/${id}/chat`, { message: text });
+      const botMessage = {
+        id: `msg-${Date.now()}-agent`,
+        sender: 'agent',
+        text: response.data.answer,
+        sources: response.data.sources,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      };
+      setChatMessages((prev) => [...prev, botMessage]);
+    } catch (err) {
+      console.error(err);
+      const errorMessage = {
+        id: `msg-${Date.now()}-error`,
+        sender: 'agent',
+        text: 'Sorry, I encountered an error. Make sure the agent has uploaded documents and is configured correctly.',
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      };
+      setChatMessages((prev) => [...prev, errorMessage]);
+    } finally {
+      setIsChatLoading(false);
+    }
   };
 
   const handleFileUpload = async (e) => {
@@ -149,7 +243,10 @@ const AgentDetails = () => {
           {/* Tabs Navigation */}
           <div className="flex space-x-2 border-b border-gray-200 dark:border-gray-800">
             <button
-              onClick={() => setActiveTab('settings')}
+              onClick={() => {
+                setActiveTab('settings');
+                setSearchParams({ tab: 'settings' });
+              }}
               className={`px-4 py-2 text-sm font-semibold border-b-2 transition-colors duration-150 outline-none ${
                 activeTab === 'settings'
                   ? 'border-green-600 text-green-600 dark:border-green-400 dark:text-green-400'
@@ -159,7 +256,10 @@ const AgentDetails = () => {
               General Settings
             </button>
             <button
-              onClick={() => setActiveTab('knowledge')}
+              onClick={() => {
+                setActiveTab('knowledge');
+                setSearchParams({ tab: 'knowledge' });
+              }}
               className={`px-4 py-2 text-sm font-semibold border-b-2 transition-colors duration-150 outline-none ${
                 activeTab === 'knowledge'
                   ? 'border-green-600 text-green-600 dark:border-green-400 dark:text-green-400'
@@ -168,10 +268,23 @@ const AgentDetails = () => {
             >
               Knowledge Base
             </button>
+            <button
+              onClick={() => {
+                setActiveTab('chat');
+                setSearchParams({ tab: 'chat' });
+              }}
+              className={`px-4 py-2 text-sm font-semibold border-b-2 transition-colors duration-150 outline-none ${
+                activeTab === 'chat'
+                  ? 'border-green-600 text-green-600 dark:border-green-400 dark:text-green-400'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+              }`}
+            >
+              Chat Sandbox
+            </button>
           </div>
 
           {/* Active Tab Panel */}
-          {activeTab === 'settings' ? (
+          {activeTab === 'settings' && (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
               {/* Form Settings */}
               <div className="md:col-span-2 p-6 bg-white dark:bg-gray-955 border border-gray-200 dark:border-gray-800 rounded-2xl">
@@ -214,7 +327,7 @@ const AgentDetails = () => {
                         />
                         <button
                           onClick={copyDeploymentLink}
-                          className="p-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg text-xs font-semibold transition-colors"
+                          className="p-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-805 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg text-xs font-semibold transition-colors"
                           title="Copy link to clipboard"
                         >
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -234,7 +347,9 @@ const AgentDetails = () => {
                 </div>
               </div>
             </div>
-          ) : (
+          )}
+
+          {activeTab === 'knowledge' && (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
               {/* Upload Panel */}
               <div className="lg:col-span-2 p-6 bg-white dark:bg-gray-955 border border-gray-200 dark:border-gray-808 rounded-2xl space-y-4">
@@ -327,6 +442,19 @@ const AgentDetails = () => {
                     ))}
                   </div>
                 )}
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'chat' && (
+            <div className="flex flex-col bg-gray-50 dark:bg-gray-900 rounded-2xl p-4 border border-gray-200 dark:border-gray-800">
+              <div className="flex-none pb-2 border-b border-gray-200 dark:border-gray-800 mb-3">
+                <h3 className="font-semibold text-gray-900 dark:text-white">Agent Sandbox Chat</h3>
+                <p className="text-xs text-gray-500">Test your agent's custom system prompt and grounding documents in real-time.</p>
+              </div>
+              <ChatWindow messages={chatMessages} isLoading={isChatLoading} />
+              <div className="mt-4 flex-none">
+                <MessageInput onSendMessage={handleSendChatMessage} disabled={isChatLoading} />
               </div>
             </div>
           )}

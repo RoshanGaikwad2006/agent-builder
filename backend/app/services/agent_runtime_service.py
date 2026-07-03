@@ -46,6 +46,8 @@ class AgentRuntimeService:
             return None
 
         system_prompt = agent.system_prompt
+        if "{context}" not in system_prompt:
+            system_prompt = system_prompt + "\n\nUse the following pieces of retrieved context to answer the question:\n{context}"
         namespace = f"agent_{agent_id}"
 
         # 2. Retrieve only agent namespace vectors
