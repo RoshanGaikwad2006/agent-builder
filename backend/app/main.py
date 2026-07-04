@@ -36,6 +36,8 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     """
     Handles application startup validation and shutdown lifecycle events.
+    Services are initialized with graceful degradation — vector store or LLM
+    failures log warnings but do NOT crash the entire application.
     """
     logger.info("Initializing AI Agent Builder Platform - RAG Core Backend...")
     logger.info(f"Configuration: HOST={settings.HOST}, PORT={settings.PORT}, LOG_LEVEL={settings.LOG_LEVEL}")
@@ -47,12 +49,25 @@ async def lifespan(app: FastAPI):
     if not settings.PINECONE_API_KEY:
         logger.warning("PINECONE_API_KEY is missing. Ingestions/Retrievals will fail until set.")
 
-    # Initialize MongoDB connection
+    # Initialize MongoDB connection (required — fail fast if DB is down)
     mongo_manager = get_mongodb_manager()
     await mongo_manager.connect()
 
+    # Pre-warm vector store and embeddings skipped to conserve startup memory
+    try:
+        logger.info("Skipping embedding model pre-warm on startup to conserve memory...")
+        # get_vectorstore_provider()
+        logger.info("Vector store pre-warm bypassed.")
+    except Exception as e:
+        logger.warning(
+            f"Vector store pre-warm failed (non-fatal): {e}. "
+            "PDF ingestion and RAG chat will fail until this is resolved, "
+            "but all other endpoints (auth, agents, conversations) remain available."
+        )
+
     yield
-    # Close MongoDB connection
+
+    # Close MongoDB connection on shutdown
     await mongo_manager.disconnect()
     logger.info("Stopping RAG Core Backend service...")
 
@@ -70,9 +85,28 @@ app = FastAPI(
 )
 
 # Enable CORS (Cross-Origin Resource Sharing) middleware
+origins = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:5173/",
+    "http://127.0.0.1:5173/"
+]
+if settings.FRONTEND_URL:
+    raw_urls = settings.FRONTEND_URL.split(",") if "," in settings.FRONTEND_URL else [settings.FRONTEND_URL]
+    for url in raw_urls:
+        clean_url = url.strip()
+        if clean_url:
+            origins.append(clean_url)
+            if clean_url.endswith("/"):
+                origins.append(clean_url.rstrip("/"))
+            else:
+                origins.append(clean_url + "/")
+# De-duplicate list preserving order
+origins = list(dict.fromkeys(origins))
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

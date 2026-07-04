@@ -15,8 +15,8 @@ from core.config import settings
 logger = logging.getLogger(__name__)
 
 # JWT configuration defaults
-JWT_SECRET = "super-secret-developer-key-please-replace-in-production-stage"
-JWT_ALGORITHM = "HS256"
+JWT_SECRET = settings.JWT_SECRET_KEY
+JWT_ALGORITHM = settings.ALGORITHM
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 24 hours
 
 

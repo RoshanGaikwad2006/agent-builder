@@ -1,15 +1,21 @@
 import React from 'react';
 
 const Navbar = ({ isDark, onToggleTheme }) => {
+  const user = JSON.parse(localStorage.getItem('user')) || {};
+  const displayName = user.name || 'Admin';
+  const initial = displayName.charAt(0).toUpperCase();
+
   return (
     <header className="sticky top-0 z-40 flex items-center justify-between w-full h-16 px-6 bg-white border-b border-gray-200 dark:bg-gray-900 dark:border-gray-800">
       <div className="flex items-center space-x-3">
         <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-green-600 text-white font-bold text-lg dark:bg-green-500">
-          R
+          A
         </div>
-        <span className="text-lg font-bold text-gray-900 dark:text-white">
-          RAG Core Agent Builder
-        </span>
+        <div>
+          <span className="text-lg font-bold text-gray-900 dark:text-white">
+            AgentForge
+          </span>
+        </div>
       </div>
 
       <div className="flex items-center space-x-4">
@@ -35,11 +41,11 @@ const Navbar = ({ isDark, onToggleTheme }) => {
 
         {/* User profile identifier (generic placeholder) */}
         <div className="flex items-center space-x-2">
-          <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center font-semibold text-sm text-gray-700 dark:text-gray-300">
-            A
+          <div className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm text-white" style={{ background: 'linear-gradient(135deg, #22c55e, #0ea5e9)' }}>
+            {initial}
           </div>
-          <span className="hidden md:inline text-sm font-medium text-gray-700 dark:text-gray-300">
-            Developer
+          <span className="hidden md:inline text-sm font-semibold text-gray-700 dark:text-gray-300">
+            {displayName}
           </span>
         </div>
       </div>

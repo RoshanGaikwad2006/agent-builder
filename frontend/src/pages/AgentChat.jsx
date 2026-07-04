@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 
 import ChatWindow from '../components/Chat/ChatWindow';
 import MessageInput from '../components/Chat/MessageInput';
@@ -9,7 +9,6 @@ import apiClient from '../services/apiClient';
 
 const AgentChat = () => {
   const { id } = useParams();
-  const navigate = useNavigate();
   const [agent, setAgent] = useState(null);
   const [messages, setMessages] = useState([]);
   const [isLoading, setIsLoading] = useState(false);

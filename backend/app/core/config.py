@@ -27,6 +27,13 @@ class Settings(BaseSettings):
     MONGODB_URI: str = "mongodb://localhost:27017"
     DATABASE_NAME: str = "rag_platform"
 
+    # JWT Configs
+    JWT_SECRET_KEY: str = "super-secret-developer-key-please-replace-in-production-stage"
+    ALGORITHM: str = "HS256"
+
+    # CORS Frontend Configurations
+    FRONTEND_URL: str = "http://localhost:5173"
+
     HOST: str = "0.0.0.0"
     PORT: int = 8080
     LOG_LEVEL: str = "INFO"

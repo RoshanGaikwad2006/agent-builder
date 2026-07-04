@@ -82,7 +82,7 @@ const Leads = () => {
           No hot leads captured yet. Try testing sandbox chat with keywords like "pricing" or "demo".
         </div>
       ) : (
-        <div className="bg-white dark:bg-gray-955 border border-gray-200 dark:border-gray-808 rounded-2xl overflow-hidden shadow-sm">
+        <div className="bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded-2xl overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
@@ -93,7 +93,7 @@ const Leads = () => {
                   <th className="px-6 py-4">Date Captured</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100 dark:divide-gray-850 text-sm text-gray-705 dark:text-gray-300">
+              <tbody className="divide-y divide-gray-100 dark:divide-gray-850 text-sm text-gray-700 dark:text-gray-300">
                 {leads.map((lead) => (
                   <tr key={lead.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-900/50 transition-colors">
                     <td className="px-6 py-4 font-semibold text-gray-900 dark:text-white">

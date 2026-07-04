@@ -287,7 +287,7 @@ const AgentDetails = () => {
           {activeTab === 'settings' && (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
               {/* Form Settings */}
-              <div className="md:col-span-2 p-6 bg-white dark:bg-gray-955 border border-gray-200 dark:border-gray-800 rounded-2xl">
+              <div className="md:col-span-2 p-6 bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded-2xl">
                 <AgentForm 
                   initialValues={agent}
                   onSubmit={handleUpdate} 
@@ -297,7 +297,7 @@ const AgentDetails = () => {
               </div>
 
               {/* Deployment Settings Panel */}
-              <div className="p-6 bg-white dark:bg-gray-955 border border-gray-200 dark:border-gray-800 rounded-2xl space-y-4">
+              <div className="p-6 bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded-2xl space-y-4">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Deployment</h3>
                 <p className="text-xs text-gray-500 dark:text-gray-400">
                   Deploy this agent publicly to generate a standalone shareable chat link.
@@ -352,7 +352,7 @@ const AgentDetails = () => {
           {activeTab === 'knowledge' && (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
               {/* Upload Panel */}
-              <div className="lg:col-span-2 p-6 bg-white dark:bg-gray-955 border border-gray-200 dark:border-gray-808 rounded-2xl space-y-4">
+              <div className="lg:col-span-2 p-6 bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded-2xl space-y-4">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Add Agent Documents</h3>
                 <p className="text-xs text-gray-500 dark:text-gray-400">
                   Upload PDF documents to parse, embed, and index them into this agent's isolated namespace.
@@ -403,7 +403,7 @@ const AgentDetails = () => {
               </div>
 
               {/* Ingested Documents List */}
-              <div className="p-6 bg-white dark:bg-gray-955 border border-gray-200 dark:border-gray-808 rounded-2xl flex flex-col min-h-[350px]">
+              <div className="p-6 bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded-2xl flex flex-col min-h-[350px]">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Ingested Knowledge</h3>
 
                 {loadingDocs ? (

@@ -26,7 +26,12 @@ class MongoDBManager:
         """
         logger.info(f"Attempting connection to MongoDB database... URI: '{self.uri}'")
         try:
-            self.client = AsyncIOMotorClient(self.uri, serverSelectionTimeoutMS=5000)
+            import certifi
+            self.client = AsyncIOMotorClient(
+                self.uri,
+                serverSelectionTimeoutMS=5000,
+                tlsCAFile=certifi.where()
+            )
             self.db = self.client[self.db_name]
             
             # Ping the database to verify active connection

@@ -12,6 +12,7 @@ class AgentModel(BaseModel):
     description: str
     system_prompt: str
     status: str = "active"
+    owner_id: Optional[str] = Field(None, description="ID of the user who owns this agent.")
     deployment_id: Optional[str] = Field(None, description="Unique deployment identifier.")
     public_url: Optional[str] = Field(None, description="Public shareable URL.")
     is_deployed: bool = Field(False, description="Deployment status flag.")

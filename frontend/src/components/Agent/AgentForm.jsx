@@ -30,7 +30,7 @@ const AgentForm = ({ initialValues = {}, onSubmit, onCancel, buttonLabel = "Save
       )}
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+        <label className="block text-sm font-bold text-green-700 dark:text-green-400 mb-1.5">
           Agent Name *
         </label>
         <input
@@ -44,7 +44,7 @@ const AgentForm = ({ initialValues = {}, onSubmit, onCancel, buttonLabel = "Save
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+        <label className="block text-sm font-bold text-green-700 dark:text-green-400 mb-1.5">
           Description
         </label>
         <textarea
@@ -57,7 +57,7 @@ const AgentForm = ({ initialValues = {}, onSubmit, onCancel, buttonLabel = "Save
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+        <label className="block text-sm font-bold text-green-700 dark:text-green-400 mb-1.5">
           System Instructions (System Prompt) *
         </label>
         <textarea
@@ -71,7 +71,7 @@ const AgentForm = ({ initialValues = {}, onSubmit, onCancel, buttonLabel = "Save
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+        <label className="block text-sm font-bold text-green-700 dark:text-green-400 mb-1.5">
           Status
         </label>
         <select

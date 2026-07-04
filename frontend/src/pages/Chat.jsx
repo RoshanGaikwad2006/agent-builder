@@ -1,18 +1,32 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import ChatWindow from '../components/Chat/ChatWindow';
 import MessageInput from '../components/Chat/MessageInput';
 import { chatApi } from '../services/chatApi';
 
 const Chat = () => {
-  const [messages, setMessages] = useState([
-    {
-      id: 'greeting',
-      sender: 'agent',
-      text: 'Hello! I am your RAG Chat Assistant. Ask me questions about the documents you have uploaded.',
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    },
-  ]);
+  const [messages, setMessages] = useState(() => {
+    const saved = sessionStorage.getItem('general_chat_messages');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error("Failed to parse saved chat messages:", e);
+      }
+    }
+    return [
+      {
+        id: 'greeting',
+        sender: 'agent',
+        text: 'Hello! I am your RAG Chat Assistant. Ask me questions about the documents you have uploaded.',
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      },
+    ];
+  });
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    sessionStorage.setItem('general_chat_messages', JSON.stringify(messages));
+  }, [messages]);
 
   const handleSendMessage = async (text) => {
     const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });

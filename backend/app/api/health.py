@@ -1,11 +1,9 @@
-import time
 import logging
 from fastapi import APIRouter, Depends, status
 
 from schemas.health import HealthResponse
 from core.config import settings
-from core.dependencies import get_vectorstore_provider, get_mongodb_manager
-from services.vectorstore.base import VectorStoreProvider
+from core.dependencies import get_mongodb_manager
 from database.mongodb import MongoDBManager
 
 logger = logging.getLogger(__name__)
@@ -17,31 +15,25 @@ router = APIRouter(tags=["Health"])
     response_model=HealthResponse,
     status_code=status.HTTP_200_OK,
     summary="Get System Health",
-    description="Returns the health status, semantic version, database connectivity, and system uptime in seconds."
+    description="Returns the health status and database connectivity status."
 )
 async def health_check(
-    vectorstore: VectorStoreProvider = Depends(get_vectorstore_provider),
     mongo_manager: MongoDBManager = Depends(get_mongodb_manager)
 ):
     """
-    Check the health of the API server and its connections to downstream services.
+    Check the health of the API server and its connection to MongoDB.
     """
-    uptime = time.time() - settings.START_TIME
-
-    # Check database connectivity health status
-    pinecone_ok = vectorstore.verify_connectivity()
     mongo_ok = await mongo_manager.verify_connectivity()
     
-    db_connected = pinecone_ok and mongo_ok
-    status_val = "healthy" if db_connected else "degraded"
-
-    if not pinecone_ok:
-        logger.warning("Health diagnostic detected connection degradation to Pinecone database.")
-    if not mongo_ok:
+    if mongo_ok:
+        status_val = "healthy"
+        db_connected = "connected"
+    else:
+        status_val = "unhealthy"
+        db_connected = "disconnected"
         logger.warning("Health diagnostic detected connection degradation to MongoDB database.")
 
     return HealthResponse(
         status=status_val,
-        version=settings.APP_VERSION,
-        uptime=uptime
+        database=db_connected
     )

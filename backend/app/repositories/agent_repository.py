@@ -34,7 +34,11 @@ class AgentRepository:
         try:
             query = {}
             if owner_id:
-                query["owner_id"] = owner_id
+                query["$or"] = [
+                    {"owner_id": owner_id},
+                    {"owner_id": {"$exists": False}},
+                    {"owner_id": None}
+                ]
             cursor = self.collection.find(query).sort("created_at", -1)
             agents = []
             async for doc in cursor:

@@ -98,7 +98,7 @@ const Conversations = () => {
           {conversations.map((conv) => (
             <div 
               key={conv.id} 
-              className="bg-white dark:bg-gray-955 border border-gray-200 dark:border-gray-808 rounded-2xl p-4 shadow-sm hover:border-gray-300 dark:hover:border-gray-705 transition-all duration-150"
+              className="bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded-2xl p-4 shadow-sm hover:border-gray-300 dark:hover:border-gray-700 transition-all duration-150"
             >
               <div className="flex justify-between items-start gap-4">
                 <div className="space-y-1 flex-1">

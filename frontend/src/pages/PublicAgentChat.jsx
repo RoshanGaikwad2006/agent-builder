@@ -94,7 +94,7 @@ const PublicAgentChat = () => {
   if (error) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col items-center justify-center p-6 text-center">
-        <div className="p-6 max-w-md bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-808 rounded-2xl shadow-sm">
+        <div className="p-6 max-w-md bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-sm">
           <svg className="mx-auto h-12 w-12 text-red-500 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
           </svg>
@@ -107,7 +107,7 @@ const PublicAgentChat = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col items-center justify-center p-4">
-      <div className="w-full max-w-4xl bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-808 rounded-2xl shadow-md p-6 flex flex-col h-[85vh]">
+      <div className="w-full max-w-4xl bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-md p-6 flex flex-col h-[85vh]">
         <div className="flex-none flex items-center justify-between border-b border-gray-100 dark:border-gray-850 pb-3 mb-4">
           <div>
             <h1 className="text-xl font-bold text-gray-900 dark:text-white">{agent.name}</h1>
